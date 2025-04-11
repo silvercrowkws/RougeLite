@@ -19,7 +19,10 @@ public class RoomGenerator : MonoBehaviour
     [SerializeField] private GameObject roomPrefab;     // 벽으로 둘러싸인 방 프리팹
     [SerializeField] private Transform roomParent;      // Grid나 다른 부모 오브젝트
 
-    /// <summary>
+    [Tooltip("마름모 반지름 (반지름은 홀수여야 함 ex : 반지름이 3이면 9개의 방 생성)")]
+    [SerializeField] private int radius = 3;
+
+    /*/// <summary>
     /// 미로를 구성하는 방들의 고정된 위치 배열
     /// </summary>
     private Vector2Int[] mazePositions = new Vector2Int[]
@@ -49,7 +52,12 @@ public class RoomGenerator : MonoBehaviour
         new Vector2Int(-6, 1),
         new Vector2Int(-4, 2),
         new Vector2Int(-2, 3)
-    };
+    };*/
+
+    /// <summary>
+    /// 자동 생성된 방 위치 리스트
+    /// </summary>
+    private List<Vector2Int> mazePositions;
 
     /// <summary>
     /// 시드 값(-1 이면 완전 랜덤)
@@ -94,6 +102,9 @@ public class RoomGenerator : MonoBehaviour
         {
             Debug.Log("[랜덤 시드] 완전 랜덤으로 실행");
         }
+
+        // 자동으로 좌표 생성
+        mazePositions = GenerateOrderedIsometricPositions(radius);
     }
 
     void Start()
@@ -108,7 +119,7 @@ public class RoomGenerator : MonoBehaviour
     /// </summary>
     private void GenerateRooms()
     {
-        for (int i = 0; i < mazePositions.Length; i++)
+        for (int i = 0; i < mazePositions.Count; i++)
         {
             Vector2Int pos = mazePositions[i];                  // 생성할 위치
             Vector3 worldPos = new Vector3(pos.x, pos.y, 0);    // 월드 좌표로 변환
@@ -194,6 +205,56 @@ public class RoomGenerator : MonoBehaviour
 
             GenerateMaze(neighborPos);                              // 재귀 호출로 DFS 계속 진행
         }
+    }
+
+    /// <summary>
+    /// 마름모 구조에 따라 생성 순서 보장된 좌표 생성
+    /// </summary>
+    /// <param name="radius"> 몇 겹의 껍질(링)을 만들 것인지 지정하는 값 (3, 5, 7, 9, 11)
+    /// 3: 25개, 5: 25개, 7 : 49개, 9 : 81개, 11 : 121개... </param>
+    /// <returns></returns>
+    private List<Vector2Int> GenerateOrderedIsometricPositions(int radius)
+    {
+        // 결과를 순서대로 담을 리스트
+        List<Vector2Int> positions = new();
+
+        // BFS 탐색용 큐
+        Queue<Vector2Int> frontier = new();
+
+        // 중복 방문 방지
+        HashSet<Vector2Int> visited = new();
+
+        Vector2Int start = Vector2Int.zero;     // 시작 지점
+        positions.Add(start);                   // 시작 지점 위치 리스트에 추가
+        visited.Add(start);                     // 시작 지점 방문했다고 표시
+        frontier.Enqueue(start);                // 탐색 시작점으로 큐에 추가
+
+        // BFS 시작
+        while (frontier.Count > 0)
+        {
+            // 큐에서 현재 좌표 꺼냄
+            var current = frontier.Dequeue();
+
+            // 네 방향(↗, ↘, ↙, ↖) 순회
+            foreach (var (offset, _) in DirectionOffsets)
+            {
+                Vector2Int neighbor = current + offset;     // 인접 좌표 계산
+
+                // Isometric Tilemap 기준 마름모 거리 계산
+                // x는 2씩 이동하기 때문에 x/2로 보정
+                int distance = Mathf.Abs(neighbor.x / 2) + Mathf.Abs(neighbor.y);
+
+                // 이미 방문했거나 반지름 초과 시 무시
+                if (visited.Contains(neighbor) || distance > radius) continue;
+
+                // 새 좌표 등록
+                visited.Add(neighbor);
+                frontier.Enqueue(neighbor);
+                positions.Add(neighbor);
+            }
+        }
+
+        return positions;
     }
 
     /// <summary>

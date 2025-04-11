@@ -814,6 +814,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   roomPrefab: {fileID: 3539704102208642899, guid: 61585c21ba9af3947affa7402c3b74f3, type: 3}
   roomParent: {fileID: 1654876825}
+  radius: 5
   seed: -1
 --- !u!1 &1654876823
 GameObject:
